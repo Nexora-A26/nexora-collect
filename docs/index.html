@@ -8,6 +8,42 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <section id="loginScreen" class="login-screen">
+    <div class="login-art">
+      <div class="login-brand">
+        <img src="icon.png" alt="Nexora Collect" />
+        <div><strong>Nexora Collect</strong><span>نكسورا للتحصيل</span></div>
+      </div>
+      <div class="login-copy">
+        <span class="login-kicker">نظام إدارة التحصيلات</span>
+        <h1>تحكم كامل بالمندوبين والعملاء والتحصيلات</h1>
+        <p>نسخة أونلاين مخصصة لمعاينة التصميم والصفحات والصلاحيات قبل تسليم برنامج سطح المكتب.</p>
+        <div class="login-features"><span>إدارة العملاء والمندوبين</span><span>التحصيلات والعمولات</span><span>التقارير والصلاحيات</span></div>
+      </div>
+      <small>نسخة معاينة — البيانات المعروضة افتراضية</small>
+    </div>
+    <div class="login-panel">
+      <form id="loginForm" class="login-card" novalidate>
+        <div class="mobile-login-brand"><img src="icon.png" alt="Nexora Collect" /><strong>Nexora Collect</strong></div>
+        <span class="eyebrow">مرحباً بك</span>
+        <h2>تسجيل الدخول</h2>
+        <p>أدخل بيانات حساب المعاينة للدخول إلى النظام.</p>
+        <label>اسم المستخدم<input id="loginUsername" autocomplete="username" placeholder="اسم المستخدم" required /></label>
+        <label>كلمة المرور<div class="password-field"><input id="loginPassword" type="password" autocomplete="current-password" placeholder="كلمة المرور" required /><button id="togglePassword" type="button" aria-label="إظهار كلمة المرور">إظهار</button></div></label>
+        <div class="login-options"><label class="remember"><input id="rememberMe" type="checkbox" /> تذكرني</label><span>نسخة تجريبية للعرض</span></div>
+        <div id="loginError" class="login-error" role="alert"></div>
+        <button id="loginButton" class="login-submit" type="submit"><span>دخول إلى النظام</span></button>
+        <div class="demo-credentials">
+          <strong>بيانات الدخول للمعاينة</strong>
+          <button type="button" data-demo-user="admin" data-demo-pass="admin123"><span>مدير النظام</span><code>admin / admin123</code></button>
+          <button type="button" data-demo-user="user" data-demo-pass="user123"><span>مستخدم</span><code>user / user123</code></button>
+          <button type="button" data-demo-user="viewer" data-demo-pass="viewer123"><span>مشاهد</span><code>viewer / viewer123</code></button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <div id="onlineApp" class="online-app is-hidden">
   <div class="preview-banner">نسخة معاينة فقط — البيانات المعروضة افتراضية ولا تدخل ضمن برنامج سطح المكتب</div>
   <div class="app-shell">
     <aside class="sidebar">
@@ -33,7 +69,7 @@
       <header class="topbar">
         <button id="menuButton" class="menu-button" aria-label="فتح القائمة">☰</button>
         <div><h1 id="pageTitle">لوحة التحكم</h1><p>استعراض تصميم ووظائف النظام قبل التسليم النهائي</p></div>
-        <div class="user"><span class="avatar">م</span><div><strong>مدير النظام</strong><small>وضع المعاينة</small></div></div>
+        <div class="user"><span id="userAvatar" class="avatar">م</span><div><strong id="currentUserName">مدير النظام</strong><small id="currentUserRole">وضع المعاينة</small></div><button id="logoutButton" class="logout-button">تسجيل الخروج</button></div>
       </header>
 
       <section id="dashboard" class="page active">
@@ -67,6 +103,7 @@
 
       <section id="settings" class="page"><div class="section-head"><div><span class="eyebrow">تخصيص النظام</span><h2>الإعدادات</h2><p>بيانات المؤسسة والعملة والطباعة والنسخ الاحتياطي.</p></div><button class="primary">حفظ التغييرات</button></div><div class="grid two"><article class="panel"><h3>إعدادات العملة</h3><div class="form-grid"><label>اسم العملة<input value="الدينار العراقي" readonly></label><label>الكود الدولي<input value="IQD" readonly></label><label>الرمز<input value="د.ع" readonly></label><label>المنازل العشرية<input value="0" readonly></label></div><div class="calc-note">تغيير العملة يغيّر العرض فقط ولا يحوّل القيم القديمة.</div></article><article class="panel"><h3>النسخ الاحتياطي</h3><p>إنشاء نسخة احتياطية محلية واستعادتها عند الحاجة.</p><div class="backup-box"><span>آخر نسخة احتياطية</span><strong>2026/07/27 — 14:30</strong><button class="secondary">إنشاء نسخة الآن</button></div></article></div></section>
     </main>
+  </div>
   </div>
   <script src="app.js"></script>
 </body>
