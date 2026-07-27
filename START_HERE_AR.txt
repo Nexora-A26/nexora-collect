@@ -1,0 +1,30 @@
+ابدأ من هنا
+============
+
+1. فك ضغط الملف في مسار بسيط، مثال:
+   C:\NexoraCollect
+
+2. ثبّت Node.js 20 أو 22 LTS إذا لم يكن مثبتاً.
+
+3. شغّل:
+   VERIFY_PROJECT_WINDOWS.bat
+
+4. للتشغيل أثناء التطوير:
+   RUN_DEV_WINDOWS.bat
+
+5. لإنشاء Setup.exe ونسخة Portable:
+   BUILD_INSTALLER_WINDOWS.bat
+
+6. عند أول تشغيل سيطلب البرنامج إنشاء مدير النظام.
+   لا توجد أسماء مستخدمين أو بيانات تجريبية جاهزة.
+
+اقرأ README_AR.md للتفاصيل الكاملة.
+
+ملاحظة الإصدار 1.0.1: بناء Windows أصبح Unsigned ولا يحتاج صلاحية Administrator بسبب تعطيل winCodeSign.
+
+
+الإصدار 1.0.2:
+- لبناء Setup وPortable شغّل BUILD_INSTALLER_WINDOWS.bat
+- لبناء Setup فقط شغّل BUILD_SETUP_ONLY_WINDOWS.bat
+- لرفع المشروع إلى GitHub اقرأ PUBLISH_TO_GITHUB_AR.md
+- معاينة العميل موجودة داخل docs ويتم نشرها عبر GitHub Pages

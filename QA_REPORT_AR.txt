@@ -1,0 +1,31 @@
+Nexora Collect v1.0.2 - تقرير التحقق
+====================================
+
+نتيجة النسخة الأساسية v1.0.1 على Windows وفق سجل البناء المرفق من المستخدم:
+[PASS] npm install.
+[PASS] TypeScript: tsc --noEmit.
+[PASS] Vite production build.
+[PASS] Electron database smoke test.
+[FAIL سابق] مرحلة winCodeSign فقط بسبب منع Windows إنشاء symbolic links.
+
+تغييرات v1.0.2:
+- لم يتم تعديل ملفات src أو electron أو قاعدة البيانات أو الحسابات المالية.
+- إضافة إعداد NSIS احترافي لملف Setup.
+- إضافة اسم مستقل لنسخة Portable.
+- إضافة أيقونة PNG/ICO صحيحة متعددة الأحجام.
+- إضافة فحص تلقائي للملفات بعد البناء وتشغيل --smoke-test على النسخة المعبأة.
+- إضافة GitHub Actions للبناء على Windows والنشر في Releases.
+- إضافة GitHub Pages لمعاينة العميل.
+- إضافة وثائق وسكربت رفع GitHub.
+
+التحقق داخل بيئة إعداد v1.0.2:
+[PASS] package.json صالح ويمكن قراءته.
+[PASS] ملفات GitHub Actions بصيغة YAML صالحة.
+[PASS] صفحة المعاينة HTML صالحة وملفات CSS/JS والأيقونة موجودة.
+[PASS] icon.ico يحتوي 7 أحجام Windows من 16 إلى 256 بكسل.
+[PASS] لا توجد تعديلات في شفرة React/Electron مقارنة بـ v1.0.1.
+[PASS] لا توجد node_modules أو بيانات تشغيل أو قاعدة بيانات داخل ملف التسليم.
+
+قيد بيئة الإعداد الحالية:
+تعذر إعادة تنزيل npm packages بسبب انتهاء مهلة الاتصال، لذلك لم يتم إنتاج Setup.exe محلياً هنا.
+يقوم BUILD_INSTALLER_WINDOWS.bat أو GitHub Actions بتنزيل الحزم والبناء على Windows، ثم يتحقق من النسخة المعبأة قبل اعتبار العملية ناجحة.

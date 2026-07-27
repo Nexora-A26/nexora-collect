@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="معاينة نظام Nexora Collect لإدارة المندوبين والعملاء والتحصيلات" />
+  <title>Nexora Collect | معاينة العميل</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="preview-banner">نسخة معاينة فقط — البيانات المعروضة افتراضية ولا تدخل ضمن برنامج سطح المكتب</div>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <img src="icon.png" alt="Nexora Collect" onerror="this.style.display='none'" />
+        <div><strong>Nexora Collect</strong><span>نكسورا للتحصيل</span></div>
+      </div>
+      <nav id="nav">
+        <button class="active" data-page="dashboard">لوحة التحكم</button>
+        <button data-page="representatives">المندوبون</button>
+        <button data-page="customers">العملاء</button>
+        <button data-page="receivables">المبالغ المستحقة</button>
+        <button data-page="collections">عمليات القبض</button>
+        <button data-page="settlements">تسليمات المندوبين</button>
+        <button data-page="reports">التقارير</button>
+        <button data-page="permissions">المستخدمون والصلاحيات</button>
+        <button data-page="settings">الإعدادات</button>
+      </nav>
+      <div class="side-note">النسخة المكتبية تعمل محلياً وتحفظ البيانات على جهاز المستخدم.</div>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <button id="menuButton" class="menu-button" aria-label="فتح القائمة">☰</button>
+        <div><h1 id="pageTitle">لوحة التحكم</h1><p>استعراض تصميم ووظائف النظام قبل التسليم النهائي</p></div>
+        <div class="user"><span class="avatar">م</span><div><strong>مدير النظام</strong><small>وضع المعاينة</small></div></div>
+      </header>
+
+      <section id="dashboard" class="page active">
+        <div class="hero"><div><span class="eyebrow">نظرة عامة</span><h2>إدارة التحصيلات من مكان واحد</h2><p>متابعة العملاء والمندوبين والأرصدة والعمولات والتقارير بدقة.</p></div><button class="primary">+ تسجيل عملية قبض</button></div>
+        <div class="cards">
+          <article><span>إجمالي المبالغ المستحقة</span><strong>84,500,000 د.ع</strong><small>جميع العملاء</small></article>
+          <article><span>إجمالي المبالغ المحصلة</span><strong>53,250,000 د.ع</strong><small>63% من المطلوب</small></article>
+          <article><span>المبالغ المتبقية</span><strong>31,250,000 د.ع</strong><small>تحتاج متابعة</small></article>
+          <article><span>عمولات المندوبين</span><strong>3,195,000 د.ع</strong><small>حسب نسب التحصيل</small></article>
+        </div>
+        <div class="grid two">
+          <article class="panel"><div class="panel-title"><h3>التحصيلات الشهرية</h3><span>آخر 6 أشهر</span></div><div class="bars"><i style="height:35%"></i><i style="height:48%"></i><i style="height:42%"></i><i style="height:67%"></i><i style="height:72%"></i><i style="height:88%"></i></div><div class="months"><span>شباط</span><span>آذار</span><span>نيسان</span><span>أيار</span><span>حزيران</span><span>تموز</span></div></article>
+          <article class="panel"><div class="panel-title"><h3>أفضل المندوبين</h3><span>هذا الشهر</span></div><div class="ranking"><div><b>1</b><span>أحمد حسن<small>12 عميلاً</small></span><strong>9,800,000 د.ع</strong></div><div><b>2</b><span>علي كريم<small>9 عملاء</small></span><strong>7,650,000 د.ع</strong></div><div><b>3</b><span>محمد قاسم<small>8 عملاء</small></span><strong>6,400,000 د.ع</strong></div></div></article>
+        </div>
+        <article class="panel"><div class="panel-title"><h3>آخر عمليات القبض</h3><button class="ghost">عرض الكل</button></div><div class="table-wrap"><table><thead><tr><th>رقم الإيصال</th><th>العميل</th><th>المندوب</th><th>المبلغ</th><th>العمولة</th><th>الحالة</th></tr></thead><tbody><tr><td>RC-00124</td><td>شركة الرافدين</td><td>أحمد حسن</td><td>2,000,000 د.ع</td><td>120,000 د.ع</td><td><span class="badge paid">مكتمل</span></td></tr><tr><td>RC-00123</td><td>مؤسسة النور</td><td>علي كريم</td><td>1,250,000 د.ع</td><td>75,000 د.ع</td><td><span class="badge paid">مكتمل</span></td></tr><tr><td>RC-00122</td><td>متجر بغداد</td><td>محمد قاسم</td><td>850,000 د.ع</td><td>51,000 د.ع</td><td><span class="badge partial">جزئي</span></td></tr></tbody></table></div></article>
+      </section>
+
+      <section id="representatives" class="page"><div class="section-head"><div><span class="eyebrow">إدارة الفريق</span><h2>المندوبون</h2><p>إضافة المندوبين وتحديد نسبهم وعملائهم ومتابعة أرصدتهم.</p></div><button class="primary">+ إضافة مندوب</button></div><div class="cards compact"><article><span>المندوبون الفعالون</span><strong>12</strong></article><article><span>إجمالي العملاء</span><strong>147</strong></article><article><span>رصيد مطلوب تسليمه</span><strong>8,420,000 د.ع</strong></article></div><article class="panel"><div class="filters"><input placeholder="بحث باسم المندوب أو الهاتف"/><select><option>جميع الحالات</option><option>فعال</option><option>متوقف</option></select></div><div class="table-wrap"><table><thead><tr><th>الكود</th><th>الاسم</th><th>الهاتف</th><th>النسبة</th><th>العملاء</th><th>المحصّل</th><th>الرصيد</th><th>الحالة</th></tr></thead><tbody><tr><td>REP-001</td><td>أحمد حسن</td><td>0770 000 0001</td><td>6%</td><td>12</td><td>9,800,000 د.ع</td><td>2,150,000 د.ع</td><td><span class="badge paid">فعال</span></td></tr><tr><td>REP-002</td><td>علي كريم</td><td>0780 000 0002</td><td>6%</td><td>9</td><td>7,650,000 د.ع</td><td>1,420,000 د.ع</td><td><span class="badge paid">فعال</span></td></tr></tbody></table></div></article></section>
+
+      <section id="customers" class="page"><div class="section-head"><div><span class="eyebrow">ملفات العملاء</span><h2>العملاء</h2><p>ربط كل عميل بمندوب ومتابعة مستحقاته ودفعاته.</p></div><button class="primary">+ إضافة عميل</button></div><article class="panel"><div class="filters"><input placeholder="بحث بالاسم أو الكود أو الهاتف"/><select><option>جميع المندوبين</option><option>أحمد حسن</option><option>علي كريم</option></select><select><option>كل حالات الدفع</option><option>مدفوع</option><option>جزئي</option><option>متأخر</option></select></div><div class="table-wrap"><table><thead><tr><th>الكود</th><th>العميل</th><th>المندوب</th><th>المستحق</th><th>المدفوع</th><th>المتبقي</th><th>الحالة</th></tr></thead><tbody><tr><td>CUS-0101</td><td>شركة الرافدين</td><td>أحمد حسن</td><td>8,000,000 د.ع</td><td>6,000,000 د.ع</td><td>2,000,000 د.ع</td><td><span class="badge partial">جزئي</span></td></tr><tr><td>CUS-0102</td><td>مؤسسة النور</td><td>علي كريم</td><td>5,500,000 د.ع</td><td>5,500,000 د.ع</td><td>0 د.ع</td><td><span class="badge paid">مدفوع</span></td></tr><tr><td>CUS-0103</td><td>متجر بغداد</td><td>محمد قاسم</td><td>3,250,000 د.ع</td><td>850,000 د.ع</td><td>2,400,000 د.ع</td><td><span class="badge late">متأخر</span></td></tr></tbody></table></div></article></section>
+
+      <section id="receivables" class="page"><div class="section-head"><div><span class="eyebrow">الذمم المالية</span><h2>المبالغ المستحقة</h2><p>تسجيل أكثر من مبلغ لكل عميل مع تواريخ الاستحقاق.</p></div><button class="primary">+ مبلغ مستحق</button></div><div class="cards compact"><article><span>غير مدفوع</span><strong>17,300,000 د.ع</strong></article><article><span>مدفوع جزئياً</span><strong>13,950,000 د.ع</strong></article><article><span>متأخر</span><strong>6,200,000 د.ع</strong></article></div><article class="panel"><div class="table-wrap"><table><thead><tr><th>الرقم</th><th>العميل</th><th>الوصف</th><th>الأصل</th><th>المدفوع</th><th>المتبقي</th><th>الاستحقاق</th><th>الحالة</th></tr></thead><tbody><tr><td>INV-0204</td><td>شركة الرافدين</td><td>مستحقات تموز</td><td>4,000,000 د.ع</td><td>2,000,000 د.ع</td><td>2,000,000 د.ع</td><td>2026/07/30</td><td><span class="badge partial">جزئي</span></td></tr><tr><td>INV-0205</td><td>متجر بغداد</td><td>دفعة توريد</td><td>2,400,000 د.ع</td><td>0 د.ع</td><td>2,400,000 د.ع</td><td>2026/07/15</td><td><span class="badge late">متأخر</span></td></tr></tbody></table></div></article></section>
+
+      <section id="collections" class="page"><div class="section-head"><div><span class="eyebrow">الحركات المالية</span><h2>عمليات القبض</h2><p>احتساب العمولة والصافي تلقائياً مع دعم الدفعات الجزئية.</p></div><button class="primary">+ تسجيل قبض</button></div><div class="collection-form panel"><h3>مثال حساب تلقائي</h3><div class="form-grid"><label>العميل<select><option>شركة الرافدين</option></select></label><label>المبلغ المقبوض<input value="2,000,000" readonly /></label><label>نسبة المندوب<input value="6%" readonly /></label><label>العمولة<input value="120,000 د.ع" readonly /></label><label>صافي الإدارة<input value="1,880,000 د.ع" readonly /></label><label>طريقة الدفع<select><option>نقداً</option></select></label></div><div class="calc-note">العمولة = المبلغ المقبوض × النسبة ÷ 100</div></div></section>
+
+      <section id="settlements" class="page"><div class="section-head"><div><span class="eyebrow">تسوية الأرصدة</span><h2>تسليمات المندوبين</h2><p>تسجيل الأموال المسلّمة للإدارة ومعرفة الرصيد المتبقي مع كل مندوب.</p></div><button class="primary">+ تسجيل تسليم</button></div><article class="panel"><div class="table-wrap"><table><thead><tr><th>رقم السند</th><th>المندوب</th><th>المبلغ المسلم</th><th>التاريخ</th><th>الطريقة</th><th>المستلم</th></tr></thead><tbody><tr><td>SET-0051</td><td>أحمد حسن</td><td>5,000,000 د.ع</td><td>2026/07/26</td><td>نقداً</td><td>مدير النظام</td></tr><tr><td>SET-0050</td><td>علي كريم</td><td>3,250,000 د.ع</td><td>2026/07/25</td><td>تحويل</td><td>مدير النظام</td></tr></tbody></table></div></article></section>
+
+      <section id="reports" class="page"><div class="section-head"><div><span class="eyebrow">تقارير قابلة للتصدير</span><h2>التقارير</h2><p>فلاتر متقدمة وتصدير PDF وExcel باللغة العربية.</p></div><div class="actions"><button class="secondary">تصدير Excel</button><button class="primary">تصدير PDF</button></div></div><div class="report-grid"><article class="panel"><h3>تقرير المندوبين</h3><p>التحصيلات، العمولات، التسليمات، والأرصدة.</p><button class="ghost">فتح التقرير</button></article><article class="panel"><h3>تقرير العملاء</h3><p>المستحق والمدفوع والمتبقي وحالة الحساب.</p><button class="ghost">فتح التقرير</button></article><article class="panel"><h3>تقرير المتأخرات</h3><p>العملاء والفواتير المتجاوزة لتاريخ الاستحقاق.</p><button class="ghost">فتح التقرير</button></article><article class="panel"><h3>تقرير العمولات</h3><p>عمولة كل مندوب حسب الفترة والعمليات.</p><button class="ghost">فتح التقرير</button></article></div></section>
+
+      <section id="permissions" class="page"><div class="section-head"><div><span class="eyebrow">تحكم كامل</span><h2>المستخدمون والصلاحيات</h2><p>المدير يحدد لكل مستخدم الصفحات والأفعال المسموحة.</p></div><button class="primary">+ إضافة مستخدم</button></div><article class="panel"><div class="permission-head"><div><span class="avatar">س</span><div><strong>سارة محمد</strong><small>مستخدم</small></div></div><span class="badge paid">فعال</span></div><div class="permission-table"><div class="p-row header"><span>الصفحة</span><span>عرض</span><span>إضافة</span><span>تعديل</span><span>حذف</span><span>تصدير</span></div><div class="p-row"><strong>لوحة التحكم</strong><input type="checkbox" checked disabled><input type="checkbox" disabled><input type="checkbox" disabled><input type="checkbox" disabled><input type="checkbox" checked disabled></div><div class="p-row"><strong>العملاء</strong><input type="checkbox" checked disabled><input type="checkbox" checked disabled><input type="checkbox" checked disabled><input type="checkbox" disabled><input type="checkbox" checked disabled></div><div class="p-row"><strong>عمليات القبض</strong><input type="checkbox" checked disabled><input type="checkbox" checked disabled><input type="checkbox" disabled><input type="checkbox" disabled><input type="checkbox" checked disabled></div><div class="p-row"><strong>الإعدادات</strong><input type="checkbox" disabled><input type="checkbox" disabled><input type="checkbox" disabled><input type="checkbox" disabled><input type="checkbox" disabled></div></div></article></section>
+
+      <section id="settings" class="page"><div class="section-head"><div><span class="eyebrow">تخصيص النظام</span><h2>الإعدادات</h2><p>بيانات المؤسسة والعملة والطباعة والنسخ الاحتياطي.</p></div><button class="primary">حفظ التغييرات</button></div><div class="grid two"><article class="panel"><h3>إعدادات العملة</h3><div class="form-grid"><label>اسم العملة<input value="الدينار العراقي" readonly></label><label>الكود الدولي<input value="IQD" readonly></label><label>الرمز<input value="د.ع" readonly></label><label>المنازل العشرية<input value="0" readonly></label></div><div class="calc-note">تغيير العملة يغيّر العرض فقط ولا يحوّل القيم القديمة.</div></article><article class="panel"><h3>النسخ الاحتياطي</h3><p>إنشاء نسخة احتياطية محلية واستعادتها عند الحاجة.</p><div class="backup-box"><span>آخر نسخة احتياطية</span><strong>2026/07/27 — 14:30</strong><button class="secondary">إنشاء نسخة الآن</button></div></article></div></section>
+    </main>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
