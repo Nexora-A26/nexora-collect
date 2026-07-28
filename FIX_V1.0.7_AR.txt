@@ -1,0 +1,13 @@
+Nexora Collect v1.0.7 - إصلاح TypeScript
+
+تم إصلاح أخطاء TypeScript الخاصة بأيقونات lucide-react في:
+src/components/Layout.tsx
+
+سبب المشكلة:
+كان نوع الأيقونة محدداً يدوياً كـ React.ComponentType بخصائص لا تطابق النوع الرسمي لمكتبة lucide-react، لأن خاصية size في LucideProps تقبل string أو number.
+
+الإصلاح:
+- استخدام النوع الرسمي LucideIcon من lucide-react.
+- تحديث إصدار المشروع إلى 1.0.7.
+
+شغّل VERIFY_PROJECT_WINDOWS.bat بعد فك الضغط.

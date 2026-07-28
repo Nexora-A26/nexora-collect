@@ -1,0 +1,11 @@
+Nexora Collect - Render deployment
+
+1. Create Supabase project.
+2. Run supabase/migrations/001_nexora_collect.sql in Supabase SQL Editor.
+3. Push this project to GitHub.
+4. In Render choose New > Blueprint and connect the repository.
+5. Enter all required environment variables.
+6. Deploy and open the generated onrender.com URL.
+7. Check /health, then create the first administrator from the app.
+
+See DEPLOY_RENDER_AR.md for complete instructions.

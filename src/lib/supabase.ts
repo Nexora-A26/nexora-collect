@@ -1,0 +1,23 @@
+import { createClient } from '@supabase/supabase-js';
+
+const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+
+export const isSupabaseConfigured = Boolean(url && anonKey);
+
+export const supabase = isSupabaseConfigured
+  ? createClient(url!, anonKey!, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+      },
+    })
+  : null;
+
+export function requireSupabase() {
+  if (!supabase) {
+    throw new Error('لم يتم إعداد اتصال Supabase. أضف VITE_SUPABASE_URL وVITE_SUPABASE_ANON_KEY في متغيرات البيئة.');
+  }
+  return supabase;
+}

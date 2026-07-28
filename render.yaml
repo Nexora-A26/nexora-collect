@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: nexora-collect
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: bash render-build.sh
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeployTrigger: commit
+    envVars:
+      - key: NODE_VERSION
+        value: 22.14.0
+      - key: NODE_ENV
+        value: production
+      - key: VITE_SUPABASE_URL
+        sync: false
+      - key: VITE_SUPABASE_ANON_KEY
+        sync: false
+      - key: VITE_AUTH_DOMAIN
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: NEXORA_AUTH_DOMAIN
+        sync: false

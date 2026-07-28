@@ -1,0 +1,9 @@
+Nexora Collect v1.2.0
+
+تمت إضافة دعم Render عبر خدمة Node/Express واحدة تقدم:
+- واجهة React/Vite.
+- واجهات API الإدارية.
+- دعم SPA routes.
+- Health check على /health.
+- ملف Blueprint باسم render.yaml.
+- سكربت بناء مخصص يمنع تثبيت حزم Electron داخل Render.

@@ -1,0 +1,12 @@
+Nexora Collect Online v1.1.0
+============================
+
+1) Create a Supabase project.
+2) Run: supabase/migrations/001_nexora_collect.sql
+3) Push this project to GitHub.
+4) Import the repository into Vercel.
+5) Add the six environment variables shown in .env.example.
+6) Deploy and open the Vercel URL.
+7) The first visit creates the first administrator account.
+
+Read DEPLOY_SUPABASE_VERCEL_AR.md for full Arabic instructions.

@@ -1,0 +1,19 @@
+Nexora Collect Online v1.1.0 - Supabase + Vercel
+=================================================
+
+1. Create a new Supabase project.
+2. Open Supabase SQL Editor and run:
+   supabase/migrations/001_nexora_collect.sql
+3. Push this folder to a GitHub repository.
+4. Import that repository into Vercel.
+5. Add the six environment variables listed in .env.example.
+6. Deploy the Vercel project.
+7. Open the Vercel URL. The first visit will ask you to create the first administrator.
+
+Important:
+- VITE_SUPABASE_ANON_KEY is browser-safe.
+- SUPABASE_SERVICE_ROLE_KEY is secret and must exist only in Vercel environment variables.
+- VITE_AUTH_DOMAIN and NEXORA_AUTH_DOMAIN must use the same value.
+- There is no demo data.
+
+Full Arabic instructions: DEPLOY_SUPABASE_VERCEL_AR.md
