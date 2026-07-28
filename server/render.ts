@@ -28,8 +28,18 @@ function run(handler: (req: any, res: any) => unknown) {
   };
 }
 
-app.get('/health', (_req, res) => {
-  res.status(200).json({ status: 'ok', service: 'nexora-collect', time: new Date().toISOString() });
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/')) {
+    next();
+    return;
+  }
+
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    next();
+    return;
+  }
+
+  res.sendFile(path.join(distDir, 'index.html'));
 });
 
 app.all('/api/setup-status', run(setupStatusHandler));
