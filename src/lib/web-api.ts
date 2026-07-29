@@ -1,6 +1,6 @@
 import { requireSupabase } from './supabase';
 
-const PAGE_KEYS: PageKey[] = ['dashboard','representatives','customers','receivables','collections','settlements','balances','reports','users','audit','settings'];
+const PAGE_KEYS: PageKey[] = ['dashboard','representatives','customers','collections','settlements','balances','reports','users','audit','settings'];
 const ACTION_KEYS: PermissionAction[] = ['view','create','edit','delete','export'];
 
 function blankPermissions(): PermissionMap {
@@ -159,10 +159,7 @@ export function createSupabaseApi(): NexoraApi {
       logout: async () => { const { error } = await supabase.auth.signOut(); if (error) throw friendlyError(error); return true; },
     },
     dashboard: {
-      get: async () => {
-        await refreshStatuses();
-        return unwrap<any>(supabase.rpc('dashboard_data'));
-      },
+      get: async () => unwrap<any>(supabase.rpc('dashboard_data')),
     },
     settings: {
       get: async () => unwrap<any>(supabase.from('settings').select('*').eq('id', 1).single()),
@@ -177,20 +174,19 @@ export function createSupabaseApi(): NexoraApi {
         return unwrap<any[]>(query);
       },
       get: async (id) => {
-        const [rep, customers, receivables, collections, settlements] = await Promise.all([
+        const [rep, customers, collections, settlements] = await Promise.all([
           unwrap<any>(supabase.from('representatives').select('*').eq('id', id).single()),
           unwrap<any[]>(supabase.from('customer_summaries').select('*').eq('representative_id', id).order('name')),
-          unwrap<any[]>(supabase.from('receivables').select('original_amount,remaining_amount,status').eq('representative_id', id).neq('status', 'cancelled')),
           unwrap<any[]>(supabase.from('collections').select('amount,commission_amount,net_amount,status').eq('representative_id', id).eq('status', 'active')),
           unwrap<any[]>(supabase.from('settlements').select('amount').eq('representative_id', id)),
         ]);
         const sum = (rows: any[], key: string) => rows.reduce((total, row) => total + Number(row[key] || 0), 0);
         const summary = {
-          receivables: sum(receivables, 'original_amount'), remaining: sum(receivables, 'remaining_amount'),
+          operations: collections.length,
           collected: sum(collections, 'amount'), commissions: sum(collections, 'commission_amount'),
-          due_to_admin: sum(collections, 'net_amount'), delivered: sum(settlements, 'amount'),
+          net: sum(collections, 'net_amount'), delivered: sum(settlements, 'amount'),
         } as any;
-        summary.outstanding = summary.due_to_admin - summary.delivered;
+        summary.outstanding = summary.net - summary.delivered;
         return { rep, customers, summary };
       },
       create: async (values) => unwrap<any>(supabase.from('representatives').insert({
@@ -213,14 +209,14 @@ export function createSupabaseApi(): NexoraApi {
         return unwrap<any[]>(query);
       },
       get: async (id) => {
-        await refreshStatuses();
-        const [customer, receivables, collections, assignments] = await Promise.all([
+        const [customer, collections, assignments] = await Promise.all([
           unwrap<any>(supabase.from('customer_summaries').select('*').eq('id', id).single()),
-          unwrap<any[]>(supabase.from('receivable_details').select('*').eq('customer_id', id).order('issue_date', { ascending: false })),
           unwrap<any[]>(supabase.from('collection_details').select('*').eq('customer_id', id).order('collection_date', { ascending: false })),
           unwrap<any[]>(supabase.from('customer_assignment_details').select('*').eq('customer_id', id).order('started_at', { ascending: false })),
         ]);
-        return { customer, receivables, collections, assignments };
+        const active = collections.filter((row) => row.status === 'active');
+        const sum = (key: string) => active.reduce((total, row) => total + Number(row[key] || 0), 0);
+        return { customer, collections, assignments, summary: { operations: active.length, collected: sum('amount'), commissions: sum('commission_amount'), net: sum('net_amount') } };
       },
       create: async (values) => {
         const row = await unwrap<any>(supabase.from('customers').insert({
@@ -326,11 +322,11 @@ export function createSupabaseApi(): NexoraApi {
       list: async () => {
         const [representatives, customers] = await Promise.all([
           unwrap<any[]>(supabase.from('representative_summaries').select('*').order('name')),
-          unwrap<any[]>(supabase.from('customer_summaries').select('*').order('remaining', { ascending: false })),
+          unwrap<any[]>(supabase.from('customer_summaries').select('*').order('collected', { ascending: false })),
         ]);
         return {
           representatives: representatives.map((r) => ({ ...r, due_to_admin: Number(r.net || 0), delivered: Number(r.settlements || 0), outstanding: Number(r.net || 0) - Number(r.settlements || 0) })),
-          customers: customers.map((c) => ({ ...c, receivables: c.total_receivable })),
+          customers: customers.map((c) => ({ ...c, collections_count: Number(c.collections_count || 0), collected: Number(c.collected || 0), commissions: Number(c.commissions || 0), net: Number(c.net || 0) })),
         };
       },
     },
@@ -355,26 +351,16 @@ export function createSupabaseApi(): NexoraApi {
     },
     reports: {
       run: async (type, filters = {}) => {
-        await refreshStatuses();
         if (type === 'representatives') {
           const rows = await unwrap<any[]>(supabase.from('representative_summaries').select('*').order('name'));
-          return rows.map((r) => ({ code: r.code, name: r.name, customers: r.customer_count, collected: r.collected, commissions: r.commissions, net: r.net, delivered: r.settlements }));
+          return rows.map((r) => ({ code: r.code, name: r.name, customers: r.customer_count, operations: r.collections_count, collected: r.collected, commissions: r.commissions, net: r.net, delivered: r.settlements }));
         }
         if (type === 'customers') {
           let query = supabase.from('customer_summaries').select('*').order('name');
           if (filters.representativeId) query = query.eq('representative_id', Number(filters.representativeId));
           if (filters.area) query = query.eq('area', filters.area);
           const rows = await unwrap<any[]>(query);
-          return rows.map((c) => ({ code: c.code, name: c.name, representative_name: c.representative_name, area: c.area, receivables: c.total_receivable, collected: c.collected, remaining: c.remaining }));
-        }
-        if (type === 'receivables' || type === 'overdue') {
-          let query = supabase.from('receivable_details').select('*').order('issue_date', { ascending: false });
-          if (filters.dateFrom) query = query.gte('issue_date', filters.dateFrom);
-          if (filters.dateTo) query = query.lte('issue_date', filters.dateTo);
-          if (filters.representativeId) query = query.eq('representative_id', Number(filters.representativeId));
-          if (filters.customerId) query = query.eq('customer_id', Number(filters.customerId));
-          if (type === 'overdue') query = query.eq('status', 'overdue');
-          return unwrap<any[]>(query);
+          return rows.map((c) => ({ code: c.code, name: c.name, representative_name: c.representative_name, area: c.area, operations: c.collections_count, collected: c.collected, commissions: c.commissions, net: c.net }));
         }
         if (type === 'collections' || type === 'commissions') {
           let query = supabase.from('collection_details').select('*').order('collection_date', { ascending: false }).order('id', { ascending: false });

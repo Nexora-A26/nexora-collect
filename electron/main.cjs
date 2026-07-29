@@ -11,7 +11,7 @@ let dbPath;
 let currentUser = null;
 
 const PAGE_KEYS = [
-  'dashboard', 'representatives', 'customers', 'receivables', 'collections',
+  'dashboard', 'representatives', 'customers', 'collections',
   'settlements', 'balances', 'reports', 'users', 'audit', 'settings'
 ];
 const ACTION_KEYS = ['view', 'create', 'edit', 'delete', 'export'];
@@ -104,6 +104,13 @@ function hasPermission(page, action = 'view') {
 function requirePermission(page, action = 'view') {
   requireAuth();
   if (!hasPermission(page, action)) throw new Error('ليس لديك صلاحية لتنفيذ هذه العملية.');
+}
+
+function requireAnyPermission(checks = []) {
+  requireAuth();
+  if (!checks.some(([page, action = 'view']) => hasPermission(page, action))) {
+    throw new Error('ليس لديك صلاحية لتنفيذ هذه العملية.');
+  }
 }
 
 function audit(action, entityType, entityId, oldValues = null, newValues = null) {
@@ -273,7 +280,7 @@ async function initializeDatabase() {
       operation_token TEXT UNIQUE,
       receipt_number TEXT NOT NULL UNIQUE,
       customer_id INTEGER NOT NULL,
-      receivable_id INTEGER NOT NULL,
+      receivable_id INTEGER,
       representative_id INTEGER,
       amount REAL NOT NULL CHECK(amount > 0),
       commission_percentage REAL NOT NULL CHECK(commission_percentage >= 0 AND commission_percentage <= 100),
@@ -331,6 +338,46 @@ async function initializeDatabase() {
     CREATE INDEX IF NOT EXISTS idx_settlements_rep ON settlements(representative_id);
   `);
 
+  const collectionInfo = rows('PRAGMA table_info(collections)');
+  const receivableColumn = collectionInfo.find((column) => column.name === 'receivable_id');
+  if (receivableColumn && Number(receivableColumn.notnull) === 1) {
+    db.run('PRAGMA foreign_keys = OFF');
+    db.run(`
+      CREATE TABLE collections_direct (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        operation_token TEXT UNIQUE,
+        receipt_number TEXT NOT NULL UNIQUE,
+        customer_id INTEGER NOT NULL,
+        receivable_id INTEGER,
+        representative_id INTEGER,
+        amount REAL NOT NULL CHECK(amount > 0),
+        commission_percentage REAL NOT NULL CHECK(commission_percentage >= 0 AND commission_percentage <= 100),
+        commission_amount REAL NOT NULL,
+        net_amount REAL NOT NULL,
+        collection_date TEXT NOT NULL,
+        payment_method TEXT NOT NULL DEFAULT 'cash',
+        notes TEXT DEFAULT '',
+        status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','cancelled')),
+        cancelled_at TEXT,
+        cancelled_by INTEGER,
+        created_by INTEGER,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY(customer_id) REFERENCES customers(id),
+        FOREIGN KEY(receivable_id) REFERENCES receivables(id),
+        FOREIGN KEY(representative_id) REFERENCES representatives(id),
+        FOREIGN KEY(created_by) REFERENCES users(id),
+        FOREIGN KEY(cancelled_by) REFERENCES users(id)
+      );
+      INSERT INTO collections_direct SELECT id,operation_token,receipt_number,customer_id,receivable_id,representative_id,amount,commission_percentage,commission_amount,net_amount,collection_date,payment_method,notes,status,cancelled_at,cancelled_by,created_by,created_at,updated_at FROM collections;
+      DROP TABLE collections;
+      ALTER TABLE collections_direct RENAME TO collections;
+      CREATE INDEX IF NOT EXISTS idx_collections_date ON collections(collection_date);
+      CREATE INDEX IF NOT EXISTS idx_collections_customer ON collections(customer_id);
+      CREATE INDEX IF NOT EXISTS idx_collections_rep ON collections(representative_id);
+    `);
+    db.run('PRAGMA foreign_keys = ON');
+  }
   const collectionColumns = rows('PRAGMA table_info(collections)').map((column) => column.name);
   if (!collectionColumns.includes('operation_token')) db.run('ALTER TABLE collections ADD COLUMN operation_token TEXT');
   db.run('CREATE UNIQUE INDEX IF NOT EXISTS idx_collections_operation_token ON collections(operation_token) WHERE operation_token IS NOT NULL');
@@ -446,15 +493,14 @@ function registerIpc() {
 
   safeHandle('dashboard:get', () => {
     requirePermission('dashboard', 'view');
-    refreshDueStatuses();
     const totals = row(`SELECT
       (SELECT COUNT(*) FROM representatives WHERE status='active') AS representatives,
       (SELECT COUNT(*) FROM customers WHERE status='active') AS customers,
-      (SELECT COALESCE(SUM(original_amount),0) FROM receivables WHERE status!='cancelled') AS receivables,
+      (SELECT COUNT(*) FROM collections WHERE status='active') AS operations,
       (SELECT COALESCE(SUM(amount),0) FROM collections WHERE status='active') AS collected,
-      (SELECT COALESCE(SUM(remaining_amount),0) FROM receivables WHERE status!='cancelled') AS remaining,
       (SELECT COALESCE(SUM(commission_amount),0) FROM collections WHERE status='active') AS commissions,
       (SELECT COALESCE(SUM(net_amount),0) FROM collections WHERE status='active') AS net,
+      ((SELECT COALESCE(SUM(net_amount),0) FROM collections WHERE status='active') - (SELECT COALESCE(SUM(amount),0) FROM settlements)) AS outstanding,
       (SELECT COALESCE(SUM(amount),0) FROM collections WHERE status='active' AND collection_date=date('now','localtime')) AS today,
       (SELECT COALESCE(SUM(amount),0) FROM collections WHERE status='active' AND substr(collection_date,1,7)=substr(date('now','localtime'),1,7)) AS month
     `);
@@ -466,17 +512,21 @@ function registerIpc() {
       WHERE c.status='active' ORDER BY c.collection_date DESC,c.id DESC LIMIT 10`);
     const trend = rows(`SELECT collection_date AS date, SUM(amount) AS amount FROM collections WHERE status='active' AND collection_date >= date('now','-29 day') GROUP BY collection_date ORDER BY collection_date`);
     const topReps = rows(`SELECT r.name, COALESCE(SUM(c.amount),0) AS amount FROM representatives r LEFT JOIN collections c ON c.representative_id=r.id AND c.status='active' GROUP BY r.id ORDER BY amount DESC LIMIT 5`);
-    const topDebtors = rows(`SELECT cu.name, COALESCE(SUM(rv.remaining_amount),0) AS remaining FROM customers cu LEFT JOIN receivables rv ON rv.customer_id=cu.id AND rv.status!='cancelled' GROUP BY cu.id HAVING remaining>0 ORDER BY remaining DESC LIMIT 5`);
-    return { totals, recent, trend, topReps, topDebtors };
+    const topCustomers = rows(`SELECT cu.name, COALESCE(SUM(c.amount),0) AS amount FROM customers cu LEFT JOIN collections c ON c.customer_id=cu.id AND c.status='active' GROUP BY cu.id ORDER BY amount DESC LIMIT 5`);
+    return { totals, recent, trend, topReps, topCustomers, topDebtors: [] };
   });
 
   safeHandle('representatives:list', ({ search = '', status = '' }) => {
-    requirePermission('representatives', 'view');
+    requireAnyPermission([['representatives','view'], ['customers','view'], ['collections','view'], ['collections','create'], ['collections','edit'], ['settlements','view'], ['settlements','create'], ['balances','view'], ['reports','view']]);
     return rows(`SELECT r.*,
       (SELECT COUNT(*) FROM customers c WHERE c.representative_id=r.id AND c.status='active') AS customer_count,
+      (SELECT COUNT(*) FROM collections c WHERE c.representative_id=r.id AND c.status='active') AS collections_count,
       (SELECT COALESCE(SUM(amount),0) FROM collections c WHERE c.representative_id=r.id AND c.status='active') AS collected,
       (SELECT COALESCE(SUM(commission_amount),0) FROM collections c WHERE c.representative_id=r.id AND c.status='active') AS commissions,
-      (SELECT COALESCE(SUM(amount),0) FROM settlements s WHERE s.representative_id=r.id) AS settlements
+      (SELECT COALESCE(SUM(net_amount),0) FROM collections c WHERE c.representative_id=r.id AND c.status='active') AS net,
+      (SELECT COALESCE(SUM(amount),0) FROM settlements s WHERE s.representative_id=r.id) AS settlements,
+      ((SELECT COALESCE(SUM(net_amount),0) FROM collections c WHERE c.representative_id=r.id AND c.status='active') -
+       (SELECT COALESCE(SUM(amount),0) FROM settlements s WHERE s.representative_id=r.id)) AS outstanding
       FROM representatives r
       WHERE (?='' OR r.name LIKE ? OR r.code LIKE ? OR r.phone LIKE ?)
         AND (?='' OR r.status=?)
@@ -488,17 +538,18 @@ function registerIpc() {
     const rep = row('SELECT * FROM representatives WHERE id=?', [id]);
     if (!rep) throw new Error('المندوب غير موجود.');
     const customers = rows(`SELECT c.*,
-      COALESCE((SELECT SUM(original_amount) FROM receivables rv WHERE rv.customer_id=c.id AND rv.status!='cancelled'),0) AS total_receivable,
-      COALESCE((SELECT SUM(amount) FROM collections cl WHERE cl.customer_id=c.id AND cl.status='active'),0) AS collected
+      (SELECT COUNT(*) FROM collections cl WHERE cl.customer_id=c.id AND cl.status='active') AS collections_count,
+      COALESCE((SELECT SUM(amount) FROM collections cl WHERE cl.customer_id=c.id AND cl.status='active'),0) AS collected,
+      COALESCE((SELECT SUM(commission_amount) FROM collections cl WHERE cl.customer_id=c.id AND cl.status='active'),0) AS commissions,
+      COALESCE((SELECT SUM(net_amount) FROM collections cl WHERE cl.customer_id=c.id AND cl.status='active'),0) AS net
       FROM customers c WHERE c.representative_id=? ORDER BY c.name`, [id]);
     const summary = row(`SELECT
-      COALESCE((SELECT SUM(original_amount) FROM receivables WHERE representative_id=? AND status!='cancelled'),0) AS receivables,
-      COALESCE((SELECT SUM(remaining_amount) FROM receivables WHERE representative_id=? AND status!='cancelled'),0) AS remaining,
+      (SELECT COUNT(*) FROM collections WHERE representative_id=? AND status='active') AS operations,
       COALESCE((SELECT SUM(amount) FROM collections WHERE representative_id=? AND status='active'),0) AS collected,
       COALESCE((SELECT SUM(commission_amount) FROM collections WHERE representative_id=? AND status='active'),0) AS commissions,
-      COALESCE((SELECT SUM(net_amount) FROM collections WHERE representative_id=? AND status='active'),0) AS due_to_admin,
-      COALESCE((SELECT SUM(amount) FROM settlements WHERE representative_id=?),0) AS delivered`, [id,id,id,id,id,id]);
-    summary.outstanding = Number(summary.due_to_admin || 0) - Number(summary.delivered || 0);
+      COALESCE((SELECT SUM(net_amount) FROM collections WHERE representative_id=? AND status='active'),0) AS net,
+      COALESCE((SELECT SUM(amount) FROM settlements WHERE representative_id=?),0) AS delivered`, [id,id,id,id,id]);
+    summary.outstanding = Number(summary.net || 0) - Number(summary.delivered || 0);
     return { rep, customers, summary };
   });
 
@@ -558,11 +609,12 @@ function registerIpc() {
   });
 
   safeHandle('customers:list', ({ search = '', representativeId = '', status = '' }) => {
-    requirePermission('customers', 'view');
+    requireAnyPermission([['customers','view'], ['collections','view'], ['collections','create'], ['collections','edit'], ['balances','view'], ['reports','view']]);
     return rows(`SELECT c.*, r.name AS representative_name,
-      COALESCE((SELECT SUM(original_amount) FROM receivables rv WHERE rv.customer_id=c.id AND rv.status!='cancelled'),0) AS total_receivable,
+      (SELECT COUNT(*) FROM collections cl WHERE cl.customer_id=c.id AND cl.status='active') AS collections_count,
       COALESCE((SELECT SUM(amount) FROM collections cl WHERE cl.customer_id=c.id AND cl.status='active'),0) AS collected,
-      COALESCE((SELECT SUM(remaining_amount) FROM receivables rv WHERE rv.customer_id=c.id AND rv.status!='cancelled'),0) AS remaining
+      COALESCE((SELECT SUM(commission_amount) FROM collections cl WHERE cl.customer_id=c.id AND cl.status='active'),0) AS commissions,
+      COALESCE((SELECT SUM(net_amount) FROM collections cl WHERE cl.customer_id=c.id AND cl.status='active'),0) AS net
       FROM customers c LEFT JOIN representatives r ON r.id=c.representative_id
       WHERE (?='' OR c.name LIKE ? OR c.code LIKE ? OR c.phone LIKE ? OR c.area LIKE ?)
         AND (?='' OR c.representative_id=?) AND (?='' OR c.status=?)
@@ -573,10 +625,16 @@ function registerIpc() {
     requirePermission('customers', 'view');
     const customer = row(`SELECT c.*,r.name AS representative_name FROM customers c LEFT JOIN representatives r ON r.id=c.representative_id WHERE c.id=?`, [id]);
     if (!customer) throw new Error('العميل غير موجود.');
-    const receivables = rows('SELECT * FROM receivables WHERE customer_id=? ORDER BY issue_date DESC,id DESC', [id]);
-    const collections = rows(`SELECT cl.*,r.name AS representative_name,rv.number AS receivable_number FROM collections cl LEFT JOIN representatives r ON r.id=cl.representative_id LEFT JOIN receivables rv ON rv.id=cl.receivable_id WHERE cl.customer_id=? ORDER BY cl.collection_date DESC,cl.id DESC`, [id]);
+    const collections = rows(`SELECT cl.*,r.name AS representative_name FROM collections cl LEFT JOIN representatives r ON r.id=cl.representative_id WHERE cl.customer_id=? ORDER BY cl.collection_date DESC,cl.id DESC`, [id]);
     const assignments = rows(`SELECT ca.*,r.name AS representative_name,u.full_name AS changed_by_name FROM customer_assignments ca LEFT JOIN representatives r ON r.id=ca.representative_id LEFT JOIN users u ON u.id=ca.changed_by WHERE ca.customer_id=? ORDER BY ca.started_at DESC`, [id]);
-    return { customer, receivables, collections, assignments };
+    const active = collections.filter((item) => item.status === 'active');
+    const summary = {
+      operations: active.length,
+      collected: active.reduce((total,item)=>total+Number(item.amount||0),0),
+      commissions: active.reduce((total,item)=>total+Number(item.commission_amount||0),0),
+      net: active.reduce((total,item)=>total+Number(item.net_amount||0),0),
+    };
+    return { customer, collections, assignments, summary };
   });
 
   safeHandle('customers:create', ({ values }) => {
@@ -716,12 +774,12 @@ function registerIpc() {
 
   safeHandle('collections:list', ({ search = '', dateFrom = '', dateTo = '', representativeId = '', customerId = '', status = '' }) => {
     requirePermission('collections', 'view');
-    return rows(`SELECT cl.*,cu.name AS customer_name,r.name AS representative_name,rv.number AS receivable_number
-      FROM collections cl JOIN customers cu ON cu.id=cl.customer_id LEFT JOIN representatives r ON r.id=cl.representative_id JOIN receivables rv ON rv.id=cl.receivable_id
-      WHERE (?='' OR cl.receipt_number LIKE ? OR cu.name LIKE ?)
+    return rows(`SELECT cl.*,cu.name AS customer_name,r.name AS representative_name
+      FROM collections cl JOIN customers cu ON cu.id=cl.customer_id LEFT JOIN representatives r ON r.id=cl.representative_id
+      WHERE (?='' OR cl.receipt_number LIKE ? OR cu.name LIKE ? OR r.name LIKE ?)
         AND (?='' OR cl.collection_date>=?) AND (?='' OR cl.collection_date<=?)
         AND (?='' OR cl.representative_id=?) AND (?='' OR cl.customer_id=?) AND (?='' OR cl.status=?)
-      ORDER BY cl.collection_date DESC,cl.id DESC`, [search,`%${search}%`,`%${search}%`,dateFrom,dateFrom,dateTo,dateTo,representativeId,representativeId,customerId,customerId,status,status]);
+      ORDER BY cl.collection_date DESC,cl.id DESC`, [search,`%${search}%`,`%${search}%`,`%${search}%`,dateFrom,dateFrom,dateTo,dateTo,representativeId,representativeId,customerId,customerId,status,status]);
   });
 
   safeHandle('collections:create', ({ values }) => {
@@ -731,22 +789,26 @@ function registerIpc() {
       const existing = row('SELECT * FROM collections WHERE operation_token=?', [v.operation_token]);
       if (existing) return existing;
     }
-    const rec = row('SELECT * FROM receivables WHERE id=?', [v.receivable_id]);
-    if (!rec || rec.status === 'cancelled') throw new Error('اختر مبلغاً مستحقاً صالحاً.');
+    const representative = row(`SELECT * FROM representatives WHERE id=? AND status='active'`, [v.representative_id]);
+    if (!representative) throw new Error('اختر مندوباً فعالاً.');
+    const customer = row(`SELECT * FROM customers WHERE id=? AND status='active'`, [v.customer_id]);
+    if (!customer) throw new Error('اختر عميلاً فعالاً.');
+    if (customer.representative_id && Number(customer.representative_id) !== Number(representative.id)) throw new Error('العميل مرتبط بمندوب آخر. انقل العميل أولاً أو اختر مندوبه الحالي.');
     const amount = Number(v.amount);
     if (!(amount > 0)) throw new Error('المبلغ المقبوض يجب أن يكون أكبر من صفر.');
-    if (amount > Number(rec.remaining_amount) + 0.000001) throw new Error('المبلغ المقبوض أكبر من المتبقي على العميل.');
-    const percentage = Number(v.commission_percentage ?? rec.commission_percentage);
+    const sourcePercentage = v.commission_percentage === '' || v.commission_percentage === undefined || v.commission_percentage === null
+      ? (customer.commission_percentage ?? representative.default_commission ?? 0)
+      : v.commission_percentage;
+    const percentage = Number(sourcePercentage);
     if (percentage < 0 || percentage > 100) throw new Error('نسبة العمولة يجب أن تكون بين 0 و100.');
     const commissionAmount = Math.round((amount * percentage / 100) * 10000) / 10000;
     const netAmount = amount - commissionAmount;
     return transaction(() => {
       const settings = getSettings();
       const receipt = v.receipt_number?.trim() || nextCode('collections', settings.receipt_prefix || 'REC', 'receipt_number');
-      const id = run(`INSERT INTO collections (operation_token,receipt_number,customer_id,receivable_id,representative_id,amount,commission_percentage,commission_amount,net_amount,collection_date,payment_method,notes,status,created_by,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,'active',?,?,?)`, [
-        v.operation_token||null,receipt,rec.customer_id,rec.id,rec.representative_id||null,amount,percentage,commissionAmount,netAmount,v.collection_date||new Date().toISOString().slice(0,10),v.payment_method||'cash',v.notes||'',currentUser.id,nowIso(),nowIso(),
+      const id = run(`INSERT INTO collections (operation_token,receipt_number,customer_id,receivable_id,representative_id,amount,commission_percentage,commission_amount,net_amount,collection_date,payment_method,notes,status,created_by,created_at,updated_at) VALUES (?,?,?,NULL,?,?,?,?,?,?,?,?,'active',?,?,?)`, [
+        v.operation_token||null,receipt,customer.id,representative.id,amount,percentage,commissionAmount,netAmount,v.collection_date||new Date().toISOString().slice(0,10),v.payment_method||'cash',v.notes||'',currentUser.id,nowIso(),nowIso(),
       ]);
-      recalcReceivable(rec.id);
       const created = row('SELECT * FROM collections WHERE id=?', [id]);
       audit('create', 'collection', id, null, created);
       return created;
@@ -757,18 +819,22 @@ function registerIpc() {
     requirePermission('collections', 'edit');
     const old = row('SELECT * FROM collections WHERE id=?', [id]);
     if (!old || old.status !== 'active') throw new Error('عملية القبض غير موجودة أو ملغاة.');
-    const rec = row('SELECT * FROM receivables WHERE id=?', [old.receivable_id]);
+    const representativeId = values.representative_id ?? old.representative_id;
+    const customerId = values.customer_id ?? old.customer_id;
+    const representative = row(`SELECT * FROM representatives WHERE id=? AND status='active'`, [representativeId]);
+    if (!representative) throw new Error('اختر مندوباً فعالاً.');
+    const customer = row(`SELECT * FROM customers WHERE id=? AND status='active'`, [customerId]);
+    if (!customer) throw new Error('اختر عميلاً فعالاً.');
+    if (customer.representative_id && Number(customer.representative_id) !== Number(representative.id)) throw new Error('العميل مرتبط بمندوب آخر. انقل العميل أولاً أو اختر مندوبه الحالي.');
     const amount = Number(values.amount ?? old.amount);
-    const maxAllowed = Number(rec.remaining_amount) + Number(old.amount);
-    if (!(amount > 0) || amount > maxAllowed + 0.000001) throw new Error('قيمة المبلغ غير صالحة أو أكبر من المتبقي.');
+    if (!(amount > 0)) throw new Error('المبلغ المقبوض يجب أن يكون أكبر من صفر.');
     const percentage = Number(values.commission_percentage ?? old.commission_percentage);
     if (percentage < 0 || percentage > 100) throw new Error('نسبة العمولة يجب أن تكون بين 0 و100.');
     const commissionAmount = Math.round((amount * percentage / 100) * 10000) / 10000;
     transaction(() => {
-      db.run(`UPDATE collections SET receipt_number=?,amount=?,commission_percentage=?,commission_amount=?,net_amount=?,collection_date=?,payment_method=?,notes=?,updated_at=? WHERE id=?`, [
-        values.receipt_number??old.receipt_number,amount,percentage,commissionAmount,amount-commissionAmount,values.collection_date??old.collection_date,values.payment_method??old.payment_method,values.notes??old.notes,nowIso(),id,
+      db.run(`UPDATE collections SET receipt_number=?,customer_id=?,receivable_id=NULL,representative_id=?,amount=?,commission_percentage=?,commission_amount=?,net_amount=?,collection_date=?,payment_method=?,notes=?,updated_at=? WHERE id=?`, [
+        values.receipt_number??old.receipt_number,customer.id,representative.id,amount,percentage,commissionAmount,amount-commissionAmount,values.collection_date??old.collection_date,values.payment_method??old.payment_method,values.notes??old.notes,nowIso(),id,
       ]);
-      recalcReceivable(old.receivable_id);
       audit('update', 'collection', id, old, row('SELECT * FROM collections WHERE id=?', [id]));
     });
     return row('SELECT * FROM collections WHERE id=?', [id]);
@@ -777,10 +843,9 @@ function registerIpc() {
   safeHandle('collections:cancel', ({ id, reason = '' }) => {
     requirePermission('collections', 'delete');
     const old = row('SELECT * FROM collections WHERE id=?', [id]);
-    if (!old) throw new Error('عملية القبض غير موجودة.');
+    if (!old || old.status !== 'active') throw new Error('عملية القبض غير موجودة أو ملغاة مسبقاً.');
     transaction(() => {
       db.run(`UPDATE collections SET status='cancelled',cancelled_at=?,cancelled_by=?,notes=?,updated_at=? WHERE id=?`, [nowIso(),currentUser.id,[old.notes,reason && `سبب الإلغاء: ${reason}`].filter(Boolean).join('\n'),nowIso(),id]);
-      recalcReceivable(old.receivable_id);
       audit('cancel', 'collection', id, old, row('SELECT * FROM collections WHERE id=?', [id]));
     });
     return true;
@@ -788,8 +853,8 @@ function registerIpc() {
 
   safeHandle('collections:receipt', ({ id }) => {
     requirePermission('collections', 'view');
-    const receipt = row(`SELECT cl.*,cu.name AS customer_name,cu.phone AS customer_phone,r.name AS representative_name,rv.number AS receivable_number,rv.description AS receivable_description,u.full_name AS created_by_name
-      FROM collections cl JOIN customers cu ON cu.id=cl.customer_id LEFT JOIN representatives r ON r.id=cl.representative_id JOIN receivables rv ON rv.id=cl.receivable_id LEFT JOIN users u ON u.id=cl.created_by WHERE cl.id=?`, [id]);
+    const receipt = row(`SELECT cl.*,cu.name AS customer_name,cu.phone AS customer_phone,r.name AS representative_name,u.full_name AS created_by_name
+      FROM collections cl JOIN customers cu ON cu.id=cl.customer_id LEFT JOIN representatives r ON r.id=cl.representative_id LEFT JOIN users u ON u.id=cl.created_by WHERE cl.id=?`, [id]);
     if (!receipt) throw new Error('الإيصال غير موجود.');
     return { receipt, settings: getSettings() };
   });
@@ -848,10 +913,11 @@ function registerIpc() {
       FROM representatives r ORDER BY r.name`);
     representatives.forEach((r) => { r.outstanding = Number(r.due_to_admin) - Number(r.delivered); });
     const customers = rows(`SELECT c.id,c.code,c.name,r.name AS representative_name,
-      COALESCE((SELECT SUM(original_amount) FROM receivables rv WHERE rv.customer_id=c.id AND rv.status!='cancelled'),0) AS receivables,
+      (SELECT COUNT(*) FROM collections cl WHERE cl.customer_id=c.id AND cl.status='active') AS collections_count,
       COALESCE((SELECT SUM(amount) FROM collections cl WHERE cl.customer_id=c.id AND cl.status='active'),0) AS collected,
-      COALESCE((SELECT SUM(remaining_amount) FROM receivables rv WHERE rv.customer_id=c.id AND rv.status!='cancelled'),0) AS remaining
-      FROM customers c LEFT JOIN representatives r ON r.id=c.representative_id ORDER BY remaining DESC,c.name`);
+      COALESCE((SELECT SUM(commission_amount) FROM collections cl WHERE cl.customer_id=c.id AND cl.status='active'),0) AS commissions,
+      COALESCE((SELECT SUM(net_amount) FROM collections cl WHERE cl.customer_id=c.id AND cl.status='active'),0) AS net
+      FROM customers c LEFT JOIN representatives r ON r.id=c.representative_id ORDER BY collected DESC,c.name`);
     return { representatives, customers };
   });
 
@@ -933,6 +999,7 @@ function registerIpc() {
     if (type === 'representatives') {
       return rows(`SELECT r.code AS code,r.name AS name,
         COALESCE((SELECT COUNT(*) FROM customers c WHERE c.representative_id=r.id),0) AS customers,
+        COALESCE((SELECT COUNT(*) FROM collections c WHERE c.representative_id=r.id AND c.status='active'),0) AS operations,
         COALESCE((SELECT SUM(amount) FROM collections c WHERE c.representative_id=r.id AND c.status='active'),0) AS collected,
         COALESCE((SELECT SUM(commission_amount) FROM collections c WHERE c.representative_id=r.id AND c.status='active'),0) AS commissions,
         COALESCE((SELECT SUM(net_amount) FROM collections c WHERE c.representative_id=r.id AND c.status='active'),0) AS net,
@@ -941,17 +1008,12 @@ function registerIpc() {
     }
     if (type === 'customers') {
       return rows(`SELECT c.code,c.name,r.name AS representative_name,c.area,
-        COALESCE((SELECT SUM(original_amount) FROM receivables rv WHERE rv.customer_id=c.id AND rv.status!='cancelled'),0) AS receivables,
+        (SELECT COUNT(*) FROM collections cl WHERE cl.customer_id=c.id AND cl.status='active') AS operations,
         COALESCE((SELECT SUM(amount) FROM collections cl WHERE cl.customer_id=c.id AND cl.status='active'),0) AS collected,
-        COALESCE((SELECT SUM(remaining_amount) FROM receivables rv WHERE rv.customer_id=c.id AND rv.status!='cancelled'),0) AS remaining
+        COALESCE((SELECT SUM(commission_amount) FROM collections cl WHERE cl.customer_id=c.id AND cl.status='active'),0) AS commissions,
+        COALESCE((SELECT SUM(net_amount) FROM collections cl WHERE cl.customer_id=c.id AND cl.status='active'),0) AS net
         FROM customers c LEFT JOIN representatives r ON r.id=c.representative_id
         WHERE (?='' OR c.representative_id=?) AND (?='' OR c.area=?) ORDER BY c.name`, [f.representativeId||'',f.representativeId||'',f.area||'',f.area||'']);
-    }
-    if (type === 'receivables' || type === 'overdue') {
-      return rows(`SELECT rv.number,cu.name AS customer_name,r.name AS representative_name,rv.description,rv.original_amount,rv.paid_amount,rv.remaining_amount,rv.issue_date,rv.due_date,rv.status
-        FROM receivables rv JOIN customers cu ON cu.id=rv.customer_id LEFT JOIN representatives r ON r.id=rv.representative_id
-        WHERE (?='' OR rv.issue_date>=?) AND (?='' OR rv.issue_date<=?) AND (?='' OR rv.representative_id=?) AND (?='' OR rv.customer_id=?)
-          AND (?!='overdue' OR rv.status='overdue') ORDER BY rv.issue_date DESC`, [f.dateFrom||'',f.dateFrom||'',f.dateTo||'',f.dateTo||'',f.representativeId||'',f.representativeId||'',f.customerId||'',f.customerId||'',type]);
     }
     if (type === 'collections' || type === 'commissions') {
       return rows(`SELECT cl.receipt_number,cl.collection_date,cu.name AS customer_name,r.name AS representative_name,cl.amount,cl.commission_percentage,cl.commission_amount,cl.net_amount,cl.payment_method,cl.status

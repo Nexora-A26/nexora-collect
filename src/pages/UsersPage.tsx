@@ -5,7 +5,7 @@ import { useAuth } from '../components/AuthContext';
 import { Button, Card, Confirm, Form, Input, Loading, Modal, PageHeader, Select } from '../components/ui';
 import { useToast } from '../components/Toast';
 
-const pages: Array<[PageKey,string]> = [['dashboard','لوحة التحكم'],['representatives','المندوبون'],['customers','العملاء'],['receivables','المبالغ المستحقة'],['collections','عمليات القبض'],['settlements','تسليمات المندوبين'],['balances','الأرصدة'],['reports','التقارير'],['users','المستخدمون'],['audit','سجل العمليات'],['settings','الإعدادات']];
+const pages: Array<[PageKey,string]> = [['dashboard','لوحة التحكم'],['representatives','المندوبون'],['customers','العملاء'],['collections','عمليات القبض'],['settlements','تسليمات المندوبين'],['balances','الأرصدة'],['reports','التقارير'],['users','المستخدمون'],['audit','سجل العمليات'],['settings','الإعدادات']];
 const actions: Array<[PermissionAction,string]> = [['view','عرض'],['create','إضافة'],['edit','تعديل'],['delete','حذف'],['export','تصدير']];
 const blankPermissions=()=>Object.fromEntries(pages.map(([p])=>[p,Object.fromEntries(actions.map(([a])=>[a,false]))]));
 const empty={username:'',full_name:'',password:'',role:'user',active:true,permissions:blankPermissions()};

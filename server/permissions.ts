@@ -1,4 +1,4 @@
-export const PAGE_KEYS = ['dashboard','representatives','customers','receivables','collections','settlements','balances','reports','users','audit','settings'] as const;
+export const PAGE_KEYS = ['dashboard','representatives','customers','collections','settlements','balances','reports','users','audit','settings'] as const;
 export const ACTION_KEYS = ['view','create','edit','delete','export'] as const;
 
 export type Role = 'admin' | 'user' | 'viewer';

@@ -1,7 +1,7 @@
 import React, { ReactNode, useEffect, useMemo, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
-  Building2, ClipboardList, FileBarChart, HandCoins, LayoutDashboard, LogOut,
+  Building2, FileBarChart, HandCoins, LayoutDashboard, LogOut,
   Menu, ReceiptText, ScrollText, Settings, ShieldCheck, Users, WalletCards, X,
   type LucideIcon
 } from 'lucide-react';
@@ -32,7 +32,6 @@ const navGroups: NavGroup[] = [
     items: [
       { key:'representatives', path:'/representatives', label:'المندوبون', icon:Users },
       { key:'customers', path:'/customers', label:'العملاء', icon:Building2 },
-      { key:'receivables', path:'/receivables', label:'المبالغ المستحقة', icon:ClipboardList },
       { key:'collections', path:'/collections', label:'عمليات القبض', icon:ReceiptText },
       { key:'settlements', path:'/settlements', label:'تسليمات المندوبين', icon:HandCoins },
       { key:'balances', path:'/balances', label:'الأرصدة', icon:WalletCards },

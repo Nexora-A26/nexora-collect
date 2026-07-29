@@ -8,7 +8,6 @@ import AuthPage from './pages/AuthPage';
 import DashboardPage from './pages/DashboardPage';
 import RepresentativesPage from './pages/RepresentativesPage';
 import CustomersPage from './pages/CustomersPage';
-import ReceivablesPage from './pages/ReceivablesPage';
 import CollectionsPage from './pages/CollectionsPage';
 import SettlementsPage from './pages/SettlementsPage';
 import BalancesPage from './pages/BalancesPage';
@@ -29,8 +28,8 @@ function AppContent(){
  const authValue=useMemo(()=>status.user?{user:status.user,settings,refreshSettings,logout,can,money}:null,[status.user,settings,refreshSettings,logout,can,money]);
  if(status.loading)return <Loading/>;
  if(!status.user)return <AuthPage needsSetup={status.needsSetup} onAuthenticated={(user)=>setStatus({loading:false,needsSetup:false,user})}/>;
- const homePath=([['dashboard','/'],['representatives','/representatives'],['customers','/customers'],['receivables','/receivables'],['collections','/collections'],['settlements','/settlements'],['balances','/balances'],['reports','/reports'],['users','/users'],['audit','/audit'],['settings','/settings']] as Array<[PageKey,string]>).find(([p])=>can(p,'view'))?.[1] || '/';
+ const homePath=([['dashboard','/'],['representatives','/representatives'],['customers','/customers'],['collections','/collections'],['settlements','/settlements'],['balances','/balances'],['reports','/reports'],['users','/users'],['audit','/audit'],['settings','/settings']] as Array<[PageKey,string]>).find(([p])=>can(p,'view'))?.[1] || '/';
  const guard=(page:PageKey,node:React.ReactNode)=>can(page,'view')?node:<Navigate to={homePath} replace/>;
- return <AuthProvider value={authValue!}><Layout><Routes><Route path="/" element={can('dashboard','view')?<DashboardPage/>:<Navigate to={homePath} replace/>}/><Route path="/representatives" element={guard('representatives',<RepresentativesPage/>)}/><Route path="/customers" element={guard('customers',<CustomersPage/>)}/><Route path="/receivables" element={guard('receivables',<ReceivablesPage/>)}/><Route path="/collections" element={guard('collections',<CollectionsPage/>)}/><Route path="/settlements" element={guard('settlements',<SettlementsPage/>)}/><Route path="/balances" element={guard('balances',<BalancesPage/>)}/><Route path="/reports" element={guard('reports',<ReportsPage/>)}/><Route path="/users" element={guard('users',<UsersPage/>)}/><Route path="/audit" element={guard('audit',<AuditPage/>)}/><Route path="/settings" element={guard('settings',<SettingsPage/>)}/><Route path="*" element={<Navigate to="/" replace/>}/></Routes></Layout></AuthProvider>;
+ return <AuthProvider value={authValue!}><Layout><Routes><Route path="/" element={can('dashboard','view')?<DashboardPage/>:<Navigate to={homePath} replace/>}/><Route path="/representatives" element={guard('representatives',<RepresentativesPage/>)}/><Route path="/customers" element={guard('customers',<CustomersPage/>)}/><Route path="/collections" element={guard('collections',<CollectionsPage/>)}/><Route path="/settlements" element={guard('settlements',<SettlementsPage/>)}/><Route path="/balances" element={guard('balances',<BalancesPage/>)}/><Route path="/reports" element={guard('reports',<ReportsPage/>)}/><Route path="/users" element={guard('users',<UsersPage/>)}/><Route path="/audit" element={guard('audit',<AuditPage/>)}/><Route path="/settings" element={guard('settings',<SettingsPage/>)}/><Route path="*" element={<Navigate to="/" replace/>}/></Routes></Layout></AuthProvider>;
 }
 export default function App(){return <ToastProvider><AppContent/></ToastProvider>}

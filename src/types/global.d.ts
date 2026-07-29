@@ -2,7 +2,7 @@ export {};
 
 declare global {
   type PermissionAction = 'view' | 'create' | 'edit' | 'delete' | 'export';
-  type PageKey = 'dashboard' | 'representatives' | 'customers' | 'receivables' | 'collections' | 'settlements' | 'balances' | 'reports' | 'users' | 'audit' | 'settings';
+  type PageKey = 'dashboard' | 'representatives' | 'customers' | 'collections' | 'settlements' | 'balances' | 'reports' | 'users' | 'audit' | 'settings';
   type PermissionMap = Record<PageKey, Record<PermissionAction, boolean>>;
 
   type AppUser = {
