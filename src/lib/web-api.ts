@@ -410,7 +410,7 @@ export function createSupabaseApi(): NexoraApi {
           .pdf-header{position:fixed;top:-34mm;left:0;right:0;height:30mm;display:flex;align-items:center;justify-content:center;border-bottom:1px solid #111827;background:white}
           .pdf-header img{width:100%;max-height:27mm;object-fit:contain}
           footer{position:fixed;bottom:-13mm;left:0;right:0;text-align:center;font-size:9px;color:#6b7280}
-          h1,h2{text-align:center;margin:0 0 12px}table{width:100%;border-collapse:collapse;font-size:11px}th,td{border:1px solid #cbd5e1;padding:7px;text-align:right;vertical-align:top}th{background:#f1f5f9;font-weight:700}.meta{display:flex;justify-content:space-between;margin:10px 0 16px;font-size:11px}
+          h1,h2{text-align:center;margin:0 0 12px}table{width:100%;border-collapse:collapse;font-size:11px;page-break-inside:auto}thead{display:table-header-group}tfoot{display:table-row-group}tr{page-break-inside:avoid;page-break-after:auto}th,td{border:1px solid #cbd5e1;padding:7px;text-align:right;vertical-align:top}th{background:#f1f5f9;font-weight:700}.report-total-row{font-weight:800;background:#ecfeff;color:#0f766e;border-top:2px solid #14b8a6}.report-total-row td{border-top:2px solid #14b8a6}.meta{display:flex;justify-content:space-between;margin:10px 0 16px;font-size:11px}
         </style></head><body><div class="pdf-header"><img src="${location.origin}/altakamul-pdf-header.png" alt="رأس التقرير"></div><footer>${generatedAt} — ${title}</footer>${html}<script>window.onload=()=>setTimeout(()=>window.print(),500)<\/script></body></html>`);
         printWindow.document.close();
         return { canceled: false };

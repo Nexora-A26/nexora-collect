@@ -39,10 +39,27 @@ export default function ReportsPage(){
   return result;
  },[rows,cfg,money]);
  const tableRows=useMemo(()=>totalRow?[...displayRows,totalRow]:displayRows,[displayRows,totalRow]);
+ const excelRows=useMemo(()=>{
+  const keys=Object.keys(cfg.headers);
+  const normalized=rows.map(row=>Object.fromEntries(keys.map(key=>{
+   if(key==='payment_method')return [key,paymentLabels[row[key]]||row[key]||''];
+   if(key==='status')return [key,statusLabels[row[key]]||row[key]||''];
+   if(cfg.money.includes(key)||cfg.sum.includes(key)||key==='commission_percentage')return [key,Number(row[key]||0)];
+   return [key,row[key]??''];
+  })));
+  if(!rows.length)return normalized;
+  const firstKey=keys[0];
+  const total:Record<string,any>={__isTotal:true};
+  for(const key of keys){
+   if(key===firstKey){total[key]='الإجمالي / Total';continue;}
+   total[key]=cfg.sum.includes(key)?rows.reduce((sum,row)=>sum+Number(row[key]||0),0):'';
+  }
+  return [...normalized,total];
+ },[rows,cfg]);
  const run=async()=>{setLoading(true);try{setRows(await window.nexora.reports.run(type,filters));}catch(e:any){toast.error(e.message)}finally{setLoading(false)}};
  const title=reportTypes.find(x=>x[0]===type)?.[1]||'تقرير';
- const excel=async()=>{try{const result=await exportExcel(title,tableRows,cfg.headers);if(!result?.canceled)toast.success('تم إنشاء ملف Excel.')}catch(e:any){toast.error(e.message)}};
- const pdf=async()=>{try{await window.nexora.export.pdf(title,tableHtml(title,tableRows,cfg.headers));toast.success('تم إنشاء ملف PDF.')}catch(e:any){toast.error(e.message)}};
+ const excel=async()=>{try{const result=await exportExcel(title,excelRows,cfg.headers);if(!result?.canceled)toast.success('تم إنشاء ملف Excel مع صف الإجمالي.')}catch(e:any){toast.error(e.message)}};
+ const pdf=async()=>{try{await window.nexora.export.pdf(title,tableHtml(title,tableRows,cfg.headers));toast.success('تم إنشاء ملف PDF مع صف الإجمالي.')}catch(e:any){toast.error(e.message)}};
  return <><PageHeader title="التقارير" subtitle="تقارير التحصيل والعمولات والتسليمات قابلة للتصفية والتصدير" actions={can('reports','export')&&rows.length>0&&<><Button variant="secondary" onClick={()=>void excel()}><FileSpreadsheet size={17}/>Excel</Button><Button variant="secondary" onClick={()=>void pdf()}><FileDown size={17}/>PDF</Button></>}/>
  <Card><div className="report-filters"><Select label="نوع التقرير" value={type} onChange={e=>{setType(e.target.value);setRows([])}}>{reportTypes.map(([k,l])=><option key={k} value={k}>{l}</option>)}</Select><Input label="من تاريخ" type="date" value={filters.dateFrom} onChange={e=>setFilters({...filters,dateFrom:e.target.value})}/><Input label="إلى تاريخ" type="date" value={filters.dateTo} onChange={e=>setFilters({...filters,dateTo:e.target.value})}/><Select label="المندوب" value={filters.representativeId} onChange={e=>setFilters({...filters,representativeId:e.target.value,customerId:''})}><option value="">الكل</option>{reps.map(r=><option key={r.id} value={r.id}>{r.name}</option>)}</Select><Select label="العميل" value={filters.customerId} onChange={e=>setFilters({...filters,customerId:e.target.value})}><option value="">الكل</option>{customers.filter(c=>!filters.representativeId||String(c.representative_id)===String(filters.representativeId)).map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</Select><Input label="المنطقة" value={filters.area} onChange={e=>setFilters({...filters,area:e.target.value})}/><Select label="طريقة الدفع" value={filters.paymentMethod} onChange={e=>setFilters({...filters,paymentMethod:e.target.value})}><option value="">الكل</option>{Object.entries(paymentLabels).map(([k,v])=><option key={k} value={k}>{v}</option>)}</Select><div className="filter-submit"><Button loading={loading} onClick={()=>void run()}><Play size={16}/>تشغيل التقرير</Button></div></div></Card>
  <Card><div className="card-title"><h3>{title}</h3><span>{rows.length} سجل</span></div><DataTable rows={tableRows} keyField="__index" columns={Object.entries(cfg.headers).map(([key,header])=>({key,header}))}/></Card>

@@ -1105,12 +1105,12 @@ function registerIpc() {
         h1,h2{text-align:center;margin-top:0}
         table{width:100%;border-collapse:collapse;margin-top:16px;page-break-inside:auto}
         thead{display:table-header-group}
-        tfoot{display:table-footer-group}
+        tfoot{display:table-row-group}
         tr{page-break-inside:avoid;page-break-after:auto}
         th,td{border:1px solid #cbd5e1;padding:8px;text-align:right;font-size:12px;vertical-align:top}
         th{background:#f1f5f9}
         .meta{display:flex;justify-content:space-between;gap:16px;margin:12px 0;page-break-inside:avoid}
-        .total{font-weight:700;background:#ecfeff}
+        .total,.report-total-row{font-weight:800;background:#ecfeff;color:#0f766e}.report-total-row td{border-top:2px solid #14b8a6}
         footer{margin-top:28px;padding-top:10px;border-top:1px solid #cbd5e1;color:#64748b;font-size:10px;text-align:center}
         @page{size:A4;margin:58mm 12mm 18mm 12mm}
       </style></head><body>${html}${footer}</body></html>`;
