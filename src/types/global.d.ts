@@ -51,6 +51,7 @@ declare global {
       list(filters?: AnyRecord): Promise<AnyRecord[]>;
       create(values: AnyRecord): Promise<AnyRecord>;
       update(id: number, values: AnyRecord): Promise<AnyRecord>;
+      remove(id: number, reason?: string): Promise<boolean>;
       cancel(id: number, reason?: string): Promise<boolean>;
       receipt(id: number): Promise<AnyRecord>;
     };

@@ -253,7 +253,49 @@ begin
 end;
 $$;
 
-create or replace function public.assign_codes()
+create or replace function public.assign_representative_code()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if coalesce(new.code,'') = '' then
+    new.code := 'REP-' || lpad(nextval('public.representative_code_seq')::text, 6, '0');
+  end if;
+  return new;
+end;
+$$;
+
+create or replace function public.assign_customer_code()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if coalesce(new.code,'') = '' then
+    new.code := 'CUS-' || lpad(nextval('public.customer_code_seq')::text, 6, '0');
+  end if;
+  return new;
+end;
+$$;
+
+create or replace function public.assign_receivable_number()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if coalesce(new.number,'') = '' then
+    new.number := 'INV-' || lpad(nextval('public.receivable_number_seq')::text, 7, '0');
+  end if;
+  return new;
+end;
+$$;
+
+create or replace function public.assign_collection_receipt()
 returns trigger
 language plpgsql
 security definer
@@ -262,16 +304,24 @@ as $$
 declare
   v_prefix text;
 begin
-  if tg_table_name = 'representatives' and coalesce(new.code,'') = '' then
-    new.code := 'REP-' || lpad(nextval('public.representative_code_seq')::text, 6, '0');
-  elsif tg_table_name = 'customers' and coalesce(new.code,'') = '' then
-    new.code := 'CUS-' || lpad(nextval('public.customer_code_seq')::text, 6, '0');
-  elsif tg_table_name = 'receivables' and coalesce(new.number,'') = '' then
-    new.number := 'INV-' || lpad(nextval('public.receivable_number_seq')::text, 7, '0');
-  elsif tg_table_name = 'collections' and coalesce(new.receipt_number,'') = '' then
+  if coalesce(new.receipt_number,'') = '' then
     select receipt_prefix into v_prefix from public.settings where id = 1;
     new.receipt_number := coalesce(nullif(v_prefix,''),'REC') || '-' || lpad(nextval('public.collection_receipt_seq')::text, 7, '0');
-  elsif tg_table_name = 'settlements' and coalesce(new.number,'') = '' then
+  end if;
+  return new;
+end;
+$$;
+
+create or replace function public.assign_settlement_number()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_prefix text;
+begin
+  if coalesce(new.number,'') = '' then
     select settlement_prefix into v_prefix from public.settings where id = 1;
     new.number := coalesce(nullif(v_prefix,''),'SET') || '-' || lpad(nextval('public.settlement_number_seq')::text, 7, '0');
   end if;
@@ -459,18 +509,46 @@ begin
 end;
 $$;
 
+create or replace function public.delete_collection(p_id bigint, p_reason text default '')
+returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_row public.collections;
+  v_reason text := btrim(coalesce(p_reason,''));
+begin
+  if not public.has_permission('collections','delete') then
+    raise exception 'ليس لديك صلاحية حذف عملية القبض.';
+  end if;
+
+  select * into v_row from public.collections where id=p_id for update;
+  if not found then raise exception 'عملية القبض غير موجودة أو حُذفت مسبقاً.'; end if;
+  if not public.can_access_representative(v_row.representative_id) then
+    raise exception 'ليس لديك صلاحية الوصول إلى عملية القبض.';
+  end if;
+
+  if v_reason <> '' then
+    update public.collections
+       set notes=concat_ws(E'\n',nullif(notes,''),'سبب الحذف النهائي: '||v_reason), updated_at=now()
+     where id=p_id;
+  end if;
+
+  delete from public.collections where id=p_id;
+  if not found then raise exception 'تعذر حذف عملية القبض.'; end if;
+  return true;
+end;
+$$;
+
+-- Backward compatibility: older clients still calling cancel_collection now delete permanently.
 create or replace function public.cancel_collection(p_id bigint, p_reason text default '')
 returns boolean
 language plpgsql
 security invoker
 as $$
 begin
-  update public.collections
-     set status='cancelled', cancelled_at=now(), cancelled_by=public.current_profile_id(),
-         notes=concat_ws(E'\n',nullif(notes,''),case when coalesce(p_reason,'')<>'' then 'سبب الإلغاء: '||p_reason end), updated_at=now()
-   where id=p_id and status='active';
-  if not found then raise exception 'عملية القبض غير موجودة أو ملغاة مسبقاً.'; end if;
-  return true;
+  return public.delete_collection(p_id,p_reason);
 end;
 $$;
 
@@ -716,11 +794,11 @@ drop trigger if exists trg_audit_receivables on public.receivables;
 drop trigger if exists trg_audit_collections on public.collections;
 drop trigger if exists trg_audit_settlements on public.settlements;
 drop trigger if exists trg_audit_settings on public.settings;
-create trigger trg_representatives_code before insert on public.representatives for each row execute function public.assign_codes();
-create trigger trg_customers_code before insert on public.customers for each row execute function public.assign_codes();
-create trigger trg_receivables_code before insert on public.receivables for each row execute function public.assign_codes();
-create trigger trg_collections_code before insert on public.collections for each row execute function public.assign_codes();
-create trigger trg_settlements_code before insert on public.settlements for each row execute function public.assign_codes();
+create trigger trg_representatives_code before insert on public.representatives for each row execute function public.assign_representative_code();
+create trigger trg_customers_code before insert on public.customers for each row execute function public.assign_customer_code();
+create trigger trg_receivables_code before insert on public.receivables for each row execute function public.assign_receivable_number();
+create trigger trg_collections_code before insert on public.collections for each row execute function public.assign_collection_receipt();
+create trigger trg_settlements_code before insert on public.settlements for each row execute function public.assign_settlement_number();
 
 create trigger trg_profiles_touch before update on public.profiles for each row execute function public.touch_updated_at();
 create trigger trg_settings_touch before update on public.settings for each row execute function public.touch_updated_at();
@@ -834,6 +912,7 @@ grant execute on function public.can_access_representative(bigint) to authentica
 grant execute on function public.refresh_overdue_receivables() to authenticated;
 grant execute on function public.create_collection(jsonb) to authenticated;
 grant execute on function public.update_collection(bigint,jsonb) to authenticated;
+grant execute on function public.delete_collection(bigint,text) to authenticated;
 grant execute on function public.cancel_collection(bigint,text) to authenticated;
 grant execute on function public.create_settlement(jsonb) to authenticated;
 grant execute on function public.transfer_customer(bigint,bigint,text) to authenticated;

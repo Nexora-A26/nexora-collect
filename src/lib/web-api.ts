@@ -289,6 +289,7 @@ export function createSupabaseApi(): NexoraApi {
       },
       create: async (values) => unwrap<any>(supabase.rpc('create_collection', { p_values: values })),
       update: async (id, values) => unwrap<any>(supabase.rpc('update_collection', { p_id: id, p_values: values })),
+      remove: async (id, reason = '') => unwrap<boolean>(supabase.rpc('delete_collection', { p_id: id, p_reason: reason })),
       cancel: async (id, reason = '') => unwrap<boolean>(supabase.rpc('cancel_collection', { p_id: id, p_reason: reason })),
       receipt: async (id) => {
         const [receipt, settings] = await Promise.all([

@@ -840,16 +840,19 @@ function registerIpc() {
     return row('SELECT * FROM collections WHERE id=?', [id]);
   });
 
-  safeHandle('collections:cancel', ({ id, reason = '' }) => {
+  const deleteCollectionHandler = ({ id, reason = '' }) => {
     requirePermission('collections', 'delete');
     const old = row('SELECT * FROM collections WHERE id=?', [id]);
-    if (!old || old.status !== 'active') throw new Error('عملية القبض غير موجودة أو ملغاة مسبقاً.');
+    if (!old) throw new Error('عملية القبض غير موجودة أو حُذفت مسبقاً.');
     transaction(() => {
-      db.run(`UPDATE collections SET status='cancelled',cancelled_at=?,cancelled_by=?,notes=?,updated_at=? WHERE id=?`, [nowIso(),currentUser.id,[old.notes,reason && `سبب الإلغاء: ${reason}`].filter(Boolean).join('\n'),nowIso(),id]);
-      audit('cancel', 'collection', id, old, row('SELECT * FROM collections WHERE id=?', [id]));
+      db.run('DELETE FROM collections WHERE id=?', [id]);
+      audit('delete', 'collection', id, old, { deleted: true, reason: String(reason || '').trim() });
     });
     return true;
-  });
+  };
+
+  safeHandle('collections:delete', deleteCollectionHandler);
+  safeHandle('collections:cancel', deleteCollectionHandler);
 
   safeHandle('collections:receipt', ({ id }) => {
     requirePermission('collections', 'view');

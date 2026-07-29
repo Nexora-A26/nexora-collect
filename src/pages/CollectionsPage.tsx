@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Calculator, Pencil, Plus, Printer, XCircle } from 'lucide-react';
+import { Calculator, Pencil, Plus, Printer, Trash2 } from 'lucide-react';
 import { DataTable } from '../components/DataTable';
 import { useAuth } from '../components/AuthContext';
 import { Button, Card, Form, Input, Loading, Modal, PageHeader, SearchInput, Select, StatusBadge, Textarea } from '../components/ui';
@@ -21,7 +21,7 @@ const newEmpty=()=>({
 export default function CollectionsPage(){
  const {money,can}=useAuth();const toast=useToast();
  const [rows,setRows]=useState<any[]>([]),[representatives,setRepresentatives]=useState<any[]>([]),[customers,setCustomers]=useState<any[]>([]),[search,setSearch]=useState(''),[loading,setLoading]=useState(true);
- const [open,setOpen]=useState(false),[editing,setEditing]=useState<any|null>(null),[form,setForm]=useState<any>(newEmpty()),[saving,setSaving]=useState(false),[cancel,setCancel]=useState<any|null>(null),[reason,setReason]=useState('');
+ const [open,setOpen]=useState(false),[editing,setEditing]=useState<any|null>(null),[form,setForm]=useState<any>(newEmpty()),[saving,setSaving]=useState(false),[deleteTarget,setDeleteTarget]=useState<any|null>(null),[reason,setReason]=useState('');
 
  const load=async()=>{setLoading(true);try{
    const [r,reps,c]=await Promise.all([
@@ -75,7 +75,7 @@ export default function CollectionsPage(){
    setOpen(false);await load();
  }catch(e:any){toast.error(e.message)}finally{setSaving(false)}};
 
- const doCancel=async()=>{if(!cancel)return;setSaving(true);try{await window.nexora.collections.cancel(cancel.id,reason);toast.success('تم إلغاء عملية القبض وإعادة احتساب الأرصدة.');setCancel(null);setReason('');await load();}catch(e:any){toast.error(e.message)}finally{setSaving(false)}};
+ const doDelete=async()=>{if(!deleteTarget)return;setSaving(true);try{await window.nexora.collections.remove(deleteTarget.id,reason);toast.success('تم حذف عملية القبض نهائياً وإعادة احتساب الأرصدة والتقارير.');setDeleteTarget(null);setReason('');await load();}catch(e:any){toast.error(e.message)}finally{setSaving(false)}};
 
  const printReceipt=async(id:number)=>{try{
    const {receipt,settings:s}=await window.nexora.collections.receipt(id);
@@ -87,7 +87,7 @@ export default function CollectionsPage(){
  <Card><div className="toolbar"><SearchInput value={search} onChange={setSearch} placeholder="بحث برقم الإيصال أو العميل أو المندوب"/></div>{loading?<Loading/>:<DataTable rows={rows} columns={[
   {key:'receipt_number',header:'الإيصال'},{key:'collection_date',header:'التاريخ'},{key:'representative_name',header:'المندوب'},{key:'customer_name',header:'العميل'},
   {key:'amount',header:'المبلغ المقبوض',render:r=>money(r.amount)},{key:'commission_percentage',header:'النسبة',render:r=>`${r.commission_percentage}%`},{key:'commission_amount',header:'العمولة',render:r=>money(r.commission_amount)},{key:'net_amount',header:'صافي الإدارة',render:r=><strong>{money(r.net_amount)}</strong>},
-  {key:'payment_method',header:'الدفع',render:r=>paymentLabels[r.payment_method]||r.payment_method},{key:'status',header:'الحالة',render:r=><StatusBadge status={r.status}/>},{key:'actions',header:'الإجراءات',render:r=><div className="row-actions"><button onClick={()=>void printReceipt(r.id)} title="PDF"><Printer size={17}/></button>{can('collections','edit')&&r.status==='active'&&<button onClick={()=>{setEditing(r);setForm({...r,representative_id:String(r.representative_id??''),customer_id:String(r.customer_id),amount:String(r.amount),commission_percentage:String(r.commission_percentage)});setOpen(true)}} title="تعديل"><Pencil size={17}/></button>}{can('collections','delete')&&r.status==='active'&&<button className="danger" onClick={()=>setCancel(r)} title="إلغاء"><XCircle size={17}/></button>}</div>}
+  {key:'payment_method',header:'الدفع',render:r=>paymentLabels[r.payment_method]||r.payment_method},{key:'status',header:'الحالة',render:r=><StatusBadge status={r.status}/>},{key:'actions',header:'الإجراءات',render:r=><div className="row-actions"><button onClick={()=>void printReceipt(r.id)} title="PDF"><Printer size={17}/></button>{can('collections','edit')&&r.status==='active'&&<button onClick={()=>{setEditing(r);setForm({...r,representative_id:String(r.representative_id??''),customer_id:String(r.customer_id),amount:String(r.amount),commission_percentage:String(r.commission_percentage)});setOpen(true)}} title="تعديل"><Pencil size={17}/></button>}{can('collections','delete')&&<button className="danger" onClick={()=>setDeleteTarget(r)} title="حذف نهائي"><Trash2 size={17}/></button>}</div>}
  ]}/>}</Card>
 
  <Modal open={open} title={editing?'تعديل عملية القبض':'تسجيل قبض مباشر'} onClose={()=>setOpen(false)} width={900}><Form onSubmit={save}><div className="form-grid">
@@ -100,6 +100,6 @@ export default function CollectionsPage(){
   <div className="full"><Textarea label="ملاحظات" rows={3} value={form.notes||''} onChange={e=>setForm({...form,notes:e.target.value})}/></div>
  </div><div className="modal-actions"><Button type="button" variant="secondary" onClick={()=>setOpen(false)}>إلغاء</Button><Button type="submit" loading={saving}>حفظ عملية القبض</Button></div></Form></Modal>
 
- <Modal open={!!cancel} title="إلغاء عملية القبض" onClose={()=>setCancel(null)} width={520}><Textarea label="سبب الإلغاء" rows={3} value={reason} onChange={e=>setReason(e.target.value)}/><div className="warning-box">سيتم إلغاء العملية وإعادة احتساب عمولة المندوب وصافي الإدارة ورصيد التسليم.</div><div className="modal-actions"><Button variant="secondary" onClick={()=>setCancel(null)}>تراجع</Button><Button variant="danger" loading={saving} onClick={doCancel}>تأكيد الإلغاء</Button></div></Modal>
+ <Modal open={!!deleteTarget} title="حذف عملية القبض نهائياً" onClose={()=>setDeleteTarget(null)} width={520}><Textarea label="سبب الحذف (اختياري)" rows={3} value={reason} onChange={e=>setReason(e.target.value)}/><div className="warning-box"><strong>تنبيه:</strong> سيتم حذف العملية نهائياً من البرنامج وقاعدة البيانات، ولن تظهر في عمليات القبض أو الأرصدة أو التقارير. لا يمكن التراجع عن هذا الإجراء.</div><div className="modal-actions"><Button variant="secondary" onClick={()=>setDeleteTarget(null)}>تراجع</Button><Button variant="danger" loading={saving} onClick={doDelete}>تأكيد الحذف النهائي</Button></div></Modal>
  </>;
 }

@@ -42,6 +42,7 @@ contextBridge.exposeInMainWorld('nexora', {
     list: (filters) => invoke('collections:list', filters),
     create: (values) => invoke('collections:create', { values }),
     update: (id, values) => invoke('collections:update', { id, values }),
+    remove: (id, reason) => invoke('collections:delete', { id, reason }),
     cancel: (id, reason) => invoke('collections:cancel', { id, reason }),
     receipt: (id) => invoke('collections:receipt', { id }),
   },
