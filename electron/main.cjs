@@ -500,6 +500,7 @@ function registerIpc() {
       (SELECT COALESCE(SUM(amount),0) FROM collections WHERE status='active') AS collected,
       (SELECT COALESCE(SUM(commission_amount),0) FROM collections WHERE status='active') AS commissions,
       (SELECT COALESCE(SUM(net_amount),0) FROM collections WHERE status='active') AS net,
+      (SELECT COALESCE(SUM(amount),0) FROM settlements) AS delivered,
       ((SELECT COALESCE(SUM(net_amount),0) FROM collections WHERE status='active') - (SELECT COALESCE(SUM(amount),0) FROM settlements)) AS outstanding,
       (SELECT COALESCE(SUM(amount),0) FROM collections WHERE status='active' AND collection_date=date('now','localtime')) AS today,
       (SELECT COALESCE(SUM(amount),0) FROM collections WHERE status='active' AND substr(collection_date,1,7)=substr(date('now','localtime'),1,7)) AS month

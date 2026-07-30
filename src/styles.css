@@ -49,3 +49,16 @@
 .direct-result-card{grid-column:1/-1;background:linear-gradient(135deg,#ecfeff,#f0fdfa);border:1px solid #99f6e4;border-radius:16px;padding:16px}.direct-result-title{display:flex;align-items:center;gap:9px;color:#0f766e;font-weight:800;margin-bottom:13px}.direct-result-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.direct-result-grid>div{background:rgba(255,255,255,.82);border:1px solid rgba(15,118,110,.12);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:5px}.direct-result-grid span{font-size:12px;color:#64748b}.direct-result-grid strong{font-size:19px;color:#0f172a}.direct-result-grid .net-result{background:#0f766e;border-color:#0f766e}.direct-result-grid .net-result span,.direct-result-grid .net-result strong{color:white}@media(max-width:700px){.direct-result-grid{grid-template-columns:1fr}}
 
 .data-table tbody tr.data-table-total-row,.data-table tbody tr.data-table-total-row:hover{background:#ecfeff}.data-table tbody tr.data-table-total-row td{font-weight:800;color:#0f766e;border-top:2px solid #14b8a6;border-bottom:0}
+
+/* v1.3.5 dashboard reliability and responsive layout */
+.dashboard-stats-grid{grid-template-columns:repeat(5,minmax(0,1fr))}
+.dashboard-charts-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;margin-bottom:20px}
+.dashboard-chart-wide{grid-column:1/-1}
+.dashboard-charts-grid .card{margin-bottom:0;min-width:0}
+.dashboard-charts-grid .chart-box{min-width:0;height:310px}
+.dashboard-error{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.dashboard-error strong{display:block}
+.dashboard-error span{flex:1;min-width:240px}
+@media(max-width:1500px){.dashboard-stats-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:1150px){.dashboard-stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.dashboard-charts-grid{grid-template-columns:1fr}.dashboard-chart-wide{grid-column:auto}}
+@media(max-width:620px){.dashboard-stats-grid{grid-template-columns:1fr}.dashboard-charts-grid .chart-box{height:270px}.dashboard-error{align-items:stretch}.dashboard-error span{min-width:0;width:100%}}
